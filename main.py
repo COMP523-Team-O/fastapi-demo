@@ -1,23 +1,46 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Path
+from pydantic import BaseModel
 
 app = FastAPI()
 
-@app.get("/")
-def read_root():
-    return {"Hello" : "World"}
+class Item(BaseModel):
+    name: str
+    price: int
 
-@app.get("/items/{item_id}")
-def read_item(item_id: int, q: str = None):
-    return {"item_id" : item_id, "q" : q}
+items = {}
 
-@app.put("/items/{item_id}")
-def update_item(item_id: int, item: str):
-    return {"item_id" : item_id, "item" : item}
+@app.get("/")  
+def home():
+    return {"Hello": "world!"}
 
-@app.post("/items/")
-def create_item(item: str):
-    return {"item" : item}
+@app.get("/get-item/{item_id}")
+def get_item(item_id: int = Path(description="The item ID you requested")):
+    return items[item_id]
 
-@app.delete("/items/{item_id}")
+@app.get("/get-by-name")
+def get_by_name(name: str = None):
+    for item_id in items:
+        if items[item_id]["name"] == name:
+            return items[item_id]
+        return {"Item": "Not found"}
+    
+@app.post("/create-item/{item_id}")
+def create_item(item_id: int, item: Item):
+    if item_id in items:
+        return {"Error": "ID already exists"}
+    items[item_id] = {"name": item.name, "price": item.price}
+    return items[item_id]
+
+@app.put("/update-item/{item_id}")
+def update_item(item_id: int, item: Item):
+    if item_id not in items:
+        return {"Error": "ID does not exist"}
+    items[item_id] = item
+    return items[item_id]
+
+@app.delete("/delete-item")
 def delete_item(item_id: int):
-    return {"item_id" : item_id}
+    if item_id not in items:
+        return {"Error": "ID not in items"}
+    del items[item_id]
+    return {"Success": "Item deleted"}
